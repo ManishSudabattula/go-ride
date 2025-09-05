@@ -1,0 +1,15 @@
+name: Validate rides.json
+
+on:
+  push:
+    paths:
+      - "rides.json"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Validate JSON
+        run: |
+          cat rides.json | jq .
