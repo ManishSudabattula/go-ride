@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ride Dashboard</title>
+  <style>
+    :root {
+      --primary: #FF914D;
+      --bg: #FFF8F0;
+      --card: #ffffff;
+      --text: #333;
+      --accent: #FFC68C;
+    }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0; padding: 1em;
+      background: var(--bg);
+      color: var(--text);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1em;
+      color: var(--primary);
+    }
+    .rides { display: flex; flex-direction: column; gap: 12px; }
+    .ride-card {
+      background: var(--card);
+      border-radius: 12px; padding: 15px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+    }
+    .ride-card h3 { margin: 0; color: var(--primary); }
+    .ride-card p { margin: 4px 0; }
+    .highlight { border: 2px solid var(--primary); }
+    a { color: var(--primary); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h2>🚗 Ride Dashboard</h2>
+  <h3>Upcoming Rides</h3>
+  <div class="rides" id="ridesList">Loading rides...</div>
+
+  <script>
+    const RAW_JSON = "https://raw.githubusercontent.com/ManishSudabattula/go-ride/main/rides.json";
+
+    async function fetchRides() {
+      const res = await fetch(RAW_JSON + "?t=" + Date.now()); // cache-bust
+      return await res.json();
+    }
+
+    function renderRides(rides) {
+      const now = new Date();
+      const ridesList = document.getElementById('ridesList');
+      ridesList.innerHTML = '';
+
+      rides.sort((a, b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
+
+      rides.forEach((r, i) => {
+        const rideTime = new Date(r.date+'T'+r.time);
+        const nextIndex = rides.findIndex(x => new Date(x.date+'T'+x.time) > now);
+        const isNext = nextIndex === i;
+
+        ridesList.innerHTML += `
+          <div class="ride-card ${isNext ? 'highlight' : ''}">
+            <h3>${r.date} @ ${r.time}</h3>
+            <p>From: <a href="https://maps.google.com/?q=${encodeURIComponent(r.from)}" target="_blank">${r.from}</a></p>
+            <p>To: <a href="https://maps.google.com/?q=${encodeURIComponent(r.to)}" target="_blank">${r.to}</a></p>
+            <p>Type: ${r.type}</p>
+            <p>📞 <a href="tel:${r.contact}">${r.contact}</a></p>
+          </div>`;
+      });
+    }
+
+    (async () => {
+      let rides = await fetchRides();
+      renderRides(rides);
+    })();
+  </script>
+</body>
+</html>
