@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ride Dashboard</title>
+  <style>
+    :root { --primary:#FF914D; --bg:#FFF8F0; --card:#fff; --text:#333; --accent:#FFC68C; }
+    body { font-family:"Segoe UI",Arial,sans-serif; margin:0; padding:1em; background:var(--bg); color:var(--text); }
+    h2 { text-align:center; color:var(--primary); }
+    form { display:flex; flex-direction:column; gap:10px; background:var(--card); padding:15px; border-radius:10px; box-shadow:0 3px 6px rgba(0,0,0,0.1); margin-bottom:20px; }
+    input, select, button { padding:12px; font-size:16px; border-radius:6px; border:1px solid #ccc; }
+    button { background:var(--primary); color:white; font-weight:bold; border:none; cursor:pointer; }
+    button:hover { background:var(--accent); }
+    .rides { display:flex; flex-direction:column; gap:12px; }
+    .ride-card { background:var(--card); border-radius:12px; padding:15px; box-shadow:0 3px 6px rgba(0,0,0,0.08); }
+    .ride-card h3 { margin:0; color:var(--primary); }
+    .highlight { border:2px solid var(--primary); }
+    a { color:var(--primary); text-decoration:none; }
+  </style>
+</head>
+<body>
+  <h2>🚗 Ride Dashboard</h2>
+
+  <!-- Add Ride Form -->
+  <form id="rideForm">
+    <input type="date" id="date" required>
+    <input type="time" id="time" required>
+    <input type="text" id="from" placeholder="From (address)" required>
+    <input type="text" id="to" placeholder="To (address)" required>
+    <input type="text" id="contact" placeholder="Contact Number" required>
+    <select id="type">
+      <option value="fixed">Fixed</option>
+      <option value="random">Random</option>
+    </select>
+    <button type="submit">➕ Add Ride</button>
+  </form>
+
+  <!-- Rides List -->
+  <h3>Upcoming Rides</h3>
+  <div class="rides" id="ridesList">Loading rides...</div>
+
+  <script>
+    async function fetchRides() {
+      const res = await fetch("/.netlify/functions/getRides");
+      return await res.json();
+    }
+
+    function renderRides(rides) {
+      const now = new Date();
+      const list = document.getElementById('ridesList');
+      list.innerHTML = '';
+      rides.sort((a,b)=>new Date(a.date+'T'+a.time)-new Date(b.date+'T'+b.time));
+      rides.forEach((r,i)=>{
+        const nextIdx = rides.findIndex(x=>new Date(x.date+'T'+x.time)>now);
+        const isNext = nextIdx===i;
+        list.innerHTML += `
+          <div class="ride-card ${isNext?'highlight':''}">
+            <h3>${r.date} @ ${r.time}</h3>
+            <p>From: <a href="https://maps.google.com/?q=${encodeURIComponent(r.from)}" target="_blank">${r.from}</a></p>
+            <p>To: <a href="https://maps.google.com/?q=${encodeURIComponent(r.to)}" target="_blank">${r.to}</a></p>
+            <p>Type: ${r.type}</p>
+            <p>📞 <a href="tel:${r.contact}">${r.contact}</a></p>
+          </div>`;
+      });
+    }
+
+    // Handle form submission
+    document.getElementById('rideForm').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const ride = {
+        date: date.value, time: time.value, from: from.value,
+        to: to.value, contact: contact.value, type: type.value
+      };
+
+      const res = await fetch("/.netlify/functions/addRide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ride)
+      });
+
+      if(res.ok) {
+        alert("✅ Ride added!");
+        renderRides(await fetchRides());
+        e.target.reset();
+      } else {
+        alert("⚠️ Failed to add ride");
+      }
+    });
+
+    // Initial load
+    (async()=>{ renderRides(await fetchRides()); })();
+  </script>
+</body>
+</html>
